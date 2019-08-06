@@ -32,40 +32,8 @@ int main( int argc, char *argv[] )
         cout << "Shared ptr test failed\n";        
     ok = BinaryTree_test();
     if( !ok )
-        cout << "BinaryTree test failed\n";        
+        cout << "BinaryTreeNode test failed\n";        
     return 0;
-}
-
-bool set_test()
-{
-    set<string> dict;
-    ifstream in("wlist_match12.txt");
-    if( !in )
-    {
-        cout << "Cannot read wlist_match12.txt\n";        
-        return false;
-    }
-    else
-    {
-        string s;
-        printf( "Reading dictionary, begin\n" );
-        while( getline(in,s) )
-        {
-            util::rtrim(s);
-            dict.insert(s);
-        }
-        printf( "Reading dictionary, end\n" );
-        auto it = dict.find("book");
-        if( it == dict.end() )
-            return false;
-        it = dict.find("engineer");
-        if( it == dict.end() )
-            return false;
-        it = dict.find("hfkhasdhkdfla");
-        if( it != dict.end() )
-            return false;
-    }
-    return true;
 }
 
 bool map_test()
@@ -102,18 +70,40 @@ bool shared_ptr_test()
 }
 
 
+template<class T>
+class BinaryTreeNode
+{
+public:
+    BinaryTreeNode(T x) : val(x) {}
+    T val;
+    shared_ptr<BinaryTreeNode> left;
+    shared_ptr<BinaryTreeNode> right;
+    bool find( const T &key );
+    void insert( const T &key );
+};
+
+template<class T>
 class BinaryTree
 {
 public:
-    BinaryTree(int x) : val(x) {}
-    int val;
-    shared_ptr<BinaryTree> left;
-    shared_ptr<BinaryTree> right;
-    bool find( int key );
-    void insert( int key );
+    shared_ptr<BinaryTreeNode<T>> data;
+    bool find( const T &key )
+    {
+        if( data )
+            return data->find(key);
+        else
+            return false;
+    }
+    void insert( const T &key )
+    {
+        if( data )
+            data->insert(key);
+        else
+            data = make_shared<BinaryTreeNode<T>>(key);
+    }
 };
 
-bool BinaryTree::find( int key )
+template<class T> bool BinaryTreeNode<T>::find( const T &key )
 {
     if( key == val )
         return true;
@@ -125,11 +115,11 @@ bool BinaryTree::find( int key )
         return false;
 }
 
-void BinaryTree::insert( int key )
+template<class T> void BinaryTreeNode<T>::insert( const T &key )
 {
     if( key == val )
     {
-        auto temp = make_shared<BinaryTree>(key);
+        auto temp = make_shared<BinaryTreeNode<T>>(key);
         temp->left = left;
         left = temp;
     }
@@ -140,10 +130,10 @@ void BinaryTree::insert( int key )
         else
         {
 #if 0
-            BinaryTree bt(key);
+            BinaryTreeNode bt(key);
             *left = bt;
 #else
-            left = make_shared<BinaryTree>(key);
+            left = make_shared<BinaryTreeNode<T>>(key);
 #endif
         }
     }
@@ -152,7 +142,7 @@ void BinaryTree::insert( int key )
         if( right )
             right->insert(key);
         else
-            right = make_shared<BinaryTree>(key);
+            right = make_shared<BinaryTreeNode<T>>(key);
     }
 }
 
@@ -160,21 +150,8 @@ bool BinaryTree_test()
 {
     bool ok = true;
 
-    // Manually constructed binary tree
-    BinaryTree bt(3);
-    bt.left = make_shared<BinaryTree>(2);
-    bt.right = make_shared<BinaryTree>(4);
-    if( !bt.find(2) )
-        return false;
-    if( !bt.find(3) )
-        return false;
-    if( !bt.find(4) )
-        return false;
-    if( bt.find(5) )
-        return false;
-
-    // Programmatically constructed binary tree
-    BinaryTree bt2(3);
+    BinaryTree<int> bt2;
+    bt2.insert(3);
     bt2.insert(4);
     bt2.insert(100);
     bt2.insert(1000);
@@ -194,6 +171,65 @@ bool BinaryTree_test()
         return false;
     if( bt2.find(5) )
         return false;
+
+    BinaryTree<string> bt3;
+    bt3.insert("Roger");
+    bt3.insert("Rabbit");
+    bt3.insert("Potter");
+    if( !bt3.find("Roger") )
+        return false;
+    if( !bt3.find("Rabbit") )
+        return false;
+    if( !bt3.find("Potter") )
+        return false;
+    if( bt3.find("Steve") )
+        return false;
     return ok;
+}
+
+bool set_test()
+{
+#if 1
+    BinaryTree<string> dict;
+#else
+    set<string> dict;
+#endif
+    ifstream in("wlist_match12.txt");
+    if( !in )
+    {
+        cout << "Cannot read wlist_match12.txt\n";        
+        return false;
+    }
+    else
+    {
+        string s;
+        printf( "Reading dictionary, begin\n" );
+        int count=0;
+        while( count++<100 && getline(in,s) )
+        {
+            util::rtrim(s);
+            dict.insert(s);
+        }
+        printf( "Reading dictionary, end\n" );
+#if 1
+        if( !dict.find("absorb") )
+            return false;
+        if( !dict.find("absorbed") )
+            return false;
+        if( dict.find("absorbfla") )
+            return false;
+#else
+        auto it = dict.find("book");
+        if( it == dict.end() )
+            return false;
+        it = dict.find("engineer");
+        if( it == dict.end() )
+            return false;
+        it = dict.find("hfkhasdhkdfla");
+        if( it != dict.end() )
+            return false;
+#endif
+    }
+    return true;
 }
 
