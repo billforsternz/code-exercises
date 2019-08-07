@@ -69,6 +69,7 @@ bool shared_ptr_test()
     return ok;
 }
 
+template<class T> class BinaryTree;
 
 template<class T>
 class BinaryTreeNode
@@ -79,7 +80,7 @@ public:
     shared_ptr<BinaryTreeNode> left;
     shared_ptr<BinaryTreeNode> right;
     bool find( const T &key );
-    void insert( const T &key );
+    void insert( const T &key, BinaryTree<T> *root, int count );
 };
 
 template<class T>
@@ -97,7 +98,7 @@ public:
     void insert( const T &key )
     {
         if( data )
-            data->insert(key);
+            data->insert(key,this,0);
         else
             data = make_shared<BinaryTreeNode<T>>(key);
     }
@@ -115,7 +116,7 @@ template<class T> bool BinaryTreeNode<T>::find( const T &key )
         return false;
 }
 
-template<class T> void BinaryTreeNode<T>::insert( const T &key )
+template<class T> void BinaryTreeNode<T>::insert( const T &key, BinaryTree<T> *root, int count  )
 {
     if( key == val )
     {
@@ -125,24 +126,79 @@ template<class T> void BinaryTreeNode<T>::insert( const T &key )
     }
     else if( key < val )
     {
-        if( left )
-            left->insert(key);
+        if( count < 5 )
+        {
+            if( left )
+                left->insert(key,root,count+1);
+            else
+                left = make_shared<BinaryTreeNode<T>>(key);
+        }
         else
         {
-#if 0
-            BinaryTreeNode bt(key);
-            *left = bt;
-#else
-            left = make_shared<BinaryTreeNode<T>>(key);
-#endif
+            auto temp = make_shared<BinaryTreeNode<T>>(key);
+            T key_root = root->data->val;
+            if( left )
+            {
+                T key_branch = left->val;
+                if( key_branch > key_root )
+                {
+                    temp->left = root->data;
+                    temp->right = left;
+                }
+                else
+                {
+                    temp->left = left;
+                    temp->right = root->data;
+                }
+                left = nullptr;
+            }
+            else
+            {
+                if( key > key_root )
+                    temp->left = root->data;
+                else
+                    temp->right = root->data;
+            }
+            root->data = temp;
         }
     }
     else if( key > val )
     {
-        if( right )
-            right->insert(key);
+        if( count < 5 )
+        {
+            if( right )
+                right->insert(key,root,count+1);
+            else
+                right = make_shared<BinaryTreeNode<T>>(key);
+        }
         else
-            right = make_shared<BinaryTreeNode<T>>(key);
+        {
+            auto temp = make_shared<BinaryTreeNode<T>>(key);
+            T key_root = root->data->val;
+            if( right )
+            {
+                T key_branch = right->val;
+                if( key_branch > key_root )
+                {
+                    temp->left = root->data;
+                    temp->right = right;
+                }
+                else
+                {
+                    temp->left = right;
+                    temp->right = root->data;
+                }
+                right = nullptr;
+            }
+            else
+            {
+                if( key > key_root )
+                    temp->left = root->data;
+                else
+                    temp->right = root->data;
+            }
+            root->data = temp;
+        }
     }
 }
 
@@ -205,7 +261,7 @@ bool set_test()
         string s;
         printf( "Reading dictionary, begin\n" );
         int count=0;
-        while( count++<100 && getline(in,s) )
+        while( /*count++<1000 &&*/ getline(in,s) )
         {
             util::rtrim(s);
             dict.insert(s);
@@ -217,6 +273,12 @@ bool set_test()
         if( !dict.find("absorbed") )
             return false;
         if( dict.find("absorbfla") )
+            return false;
+        if( !dict.find("random") )
+            return false;
+        if( !dict.find("good") )
+            return false;
+        if( dict.find("hfdkjhafd") )
             return false;
 #else
         auto it = dict.find("book");
@@ -231,5 +293,6 @@ bool set_test()
 #endif
     }
     return true;
+
 }
 
