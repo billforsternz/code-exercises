@@ -69,6 +69,8 @@ bool shared_ptr_test()
     return ok;
 }
 
+static int max_depth;
+
 template<class T> class BinaryTree;
 
 template<class T>
@@ -81,6 +83,7 @@ public:
     shared_ptr<BinaryTreeNode> right;
     bool find( const T &key );
     void insert( const T &key, BinaryTree<T> *root, int count );
+    void traverse( int depth );
 };
 
 template<class T>
@@ -102,6 +105,11 @@ public:
         else
             data = make_shared<BinaryTreeNode<T>>(key);
     }
+    void traverse()
+    {
+        if( data )
+            data->traverse(1);
+    }
 };
 
 template<class T> bool BinaryTreeNode<T>::find( const T &key )
@@ -116,6 +124,24 @@ template<class T> bool BinaryTreeNode<T>::find( const T &key )
         return false;
 }
 
+template<class T> void BinaryTreeNode<T>::traverse( int depth )
+{
+    if( depth > max_depth )
+        max_depth = depth;
+    cout << depth << " ";
+    cout << val << "\n";
+    if( left )
+    {
+        cout << "L";
+        left->traverse(++depth);
+    }
+    if( right )
+    {
+        cout << "R";
+        right->traverse(++depth);
+    }
+}
+
 template<class T> void BinaryTreeNode<T>::insert( const T &key, BinaryTree<T> *root, int count  )
 {
     if( key == val )
@@ -124,81 +150,28 @@ template<class T> void BinaryTreeNode<T>::insert( const T &key, BinaryTree<T> *r
         temp->left = left;
         left = temp;
     }
+ /*  else if( count > 5 )
+    {
+        auto temp = make_shared<BinaryTreeNode<T>>(key);
+        if( key < root->data->val )
+            temp->right = root->data;
+        else
+            temp->left = root->data;
+        root->data = temp;
+    } */
     else if( key < val )
     {
-        if( count < 5 )
-        {
-            if( left )
-                left->insert(key,root,count+1);
-            else
-                left = make_shared<BinaryTreeNode<T>>(key);
-        }
+        if( left )
+            left->insert(key,root,count+1);
         else
-        {
-            auto temp = make_shared<BinaryTreeNode<T>>(key);
-            T key_root = root->data->val;
-            if( left )
-            {
-                T key_branch = left->val;
-                if( key_branch > key_root )
-                {
-                    temp->left = root->data;
-                    temp->right = left;
-                }
-                else
-                {
-                    temp->left = left;
-                    temp->right = root->data;
-                }
-                left = nullptr;
-            }
-            else
-            {
-                if( key > key_root )
-                    temp->left = root->data;
-                else
-                    temp->right = root->data;
-            }
-            root->data = temp;
-        }
+            left = make_shared<BinaryTreeNode<T>>(key);
     }
     else if( key > val )
     {
-        if( count < 5 )
-        {
-            if( right )
-                right->insert(key,root,count+1);
-            else
-                right = make_shared<BinaryTreeNode<T>>(key);
-        }
+        if( right )
+            right->insert(key,root,count+1);
         else
-        {
-            auto temp = make_shared<BinaryTreeNode<T>>(key);
-            T key_root = root->data->val;
-            if( right )
-            {
-                T key_branch = right->val;
-                if( key_branch > key_root )
-                {
-                    temp->left = root->data;
-                    temp->right = right;
-                }
-                else
-                {
-                    temp->left = right;
-                    temp->right = root->data;
-                }
-                right = nullptr;
-            }
-            else
-            {
-                if( key > key_root )
-                    temp->left = root->data;
-                else
-                    temp->right = root->data;
-            }
-            root->data = temp;
-        }
+            right = make_shared<BinaryTreeNode<T>>(key);
     }
 }
 
@@ -259,15 +232,42 @@ bool set_test()
     else
     {
         string s;
-        printf( "Reading dictionary, begin\n" );
-        int count=0;
-        while( /*count++<1000 &&*/ getline(in,s) )
+        cerr << "Reading dictionary, begin\n";
+        vector<string> v;
+        vector<bool> flags;
+        while( getline(in,s) )
         {
             util::rtrim(s);
-            dict.insert(s);
+            v.push_back(s);
+            flags.push_back(false);
         }
-        printf( "Reading dictionary, end\n" );
+        int len = v.size();
+        int count = 0, rands=0;
+        while( count < len-1000 )
+        {
+            int idx = rand();
+            rands++;
+            idx = idx%len;
+            if( !flags[idx] )
+            {
+                flags[idx] = true;
+                dict.insert( v[idx] );
+                count++;
+            }
+        }
+        for( int idx=0; idx<len; idx++ )
+        {
+            if( !flags[idx] )
+            {
+                flags[idx] = true;
+                dict.insert( v[idx] );
+            }
+        }
+        cerr << util::sprintf( "Reading dictionary(%d,%d), end\n", rands++, len-1000 );
 #if 1
+        dict.traverse();
+        cout << max_depth;
+        cerr << "Max depth = " << max_depth;
         if( !dict.find("absorb") )
             return false;
         if( !dict.find("absorbed") )
@@ -280,6 +280,13 @@ bool set_test()
             return false;
         if( dict.find("hfdkjhafd") )
             return false;
+        if( !dict.find("book") )
+            return false;
+        if( !dict.find("engineer") )
+            return false;
+        if( dict.find("hfkhasdhkdfla") )
+            return false;
+        cerr << "Test passed";
 #else
         auto it = dict.find("book");
         if( it == dict.end() )
@@ -295,4 +302,5 @@ bool set_test()
     return true;
 
 }
+
 
