@@ -16,15 +16,11 @@ using namespace std;
 
 bool map_test();
 bool shared_ptr_test();
-bool set_test();
 bool BinaryTree_test();
 
 int main( int argc, char *argv[] )
 {
-    bool ok = set_test();
-    if( !ok )
-        cout << "Set test failed\n";        
-    ok = map_test();
+    bool ok = map_test();
     if( !ok )
         cout << "Map test failed\n";        
     ok = shared_ptr_test();
@@ -82,10 +78,30 @@ public:
     shared_ptr<BinaryTreeNode> left;
     shared_ptr<BinaryTreeNode> right;
     bool find( const T &key );
-    void insert( const T &key, BinaryTree<T> *root, int count );
+    void insert( const T &key );
     void traverse( int depth );
+    void traverse_read( std::vector<T> &keys );
+    bool validate( T &max, T &min );
 };
 
+
+#if 0
+// Implement it using standard library
+template<class T>
+class BinaryTree
+{
+public:
+    std::set<T> bt;
+    bool find( const T &key )       { auto it=bt.find(key); return it!= bt.end(); }
+    void insert( const T &key )     { bt.insert(key); }
+    void traverse()                 {}
+    void clear()                    { bt.clear(); }
+    std::vector<T> traverse_read()  { std::vector<T> keys; for( auto T: bt ) keys.push_back(T); return keys; }
+    bool validate()                 { return true; }
+};
+
+#else
+// Implement it ourself
 template<class T>
 class BinaryTree
 {
@@ -101,7 +117,7 @@ public:
     void insert( const T &key )
     {
         if( data )
-            data->insert(key,this,0);
+            data->insert(key);
         else
             data = make_shared<BinaryTreeNode<T>>(key);
     }
@@ -110,7 +126,29 @@ public:
         if( data )
             data->traverse(1);
     }
+    void clear()
+    {
+        data.reset();
+    }
+    std::vector<T> traverse_read()
+    {
+        std::vector<T> keys;
+        if( data )
+            data->traverse_read(keys);
+        return keys;
+    }
+    bool validate()
+    {
+        bool ok=true;
+        if( data )
+        {
+            T max=data->val, min=data->val;
+            ok = data->validate( max, min );
+        }
+        return ok;
+    }
 };
+#endif
 
 template<class T> bool BinaryTreeNode<T>::find( const T &key )
 {
@@ -142,7 +180,42 @@ template<class T> void BinaryTreeNode<T>::traverse( int depth )
     }
 }
 
-template<class T> void BinaryTreeNode<T>::insert( const T &key, BinaryTree<T> *root, int count  )
+template<class T> void BinaryTreeNode<T>::traverse_read( std::vector<T> &keys )
+{
+    keys.push_back(val);
+    if( left )
+        left->traverse_read(keys);
+    if( right )
+        right->traverse_read(keys);
+}
+
+// Get the max and min of this node and all its decendents, returns
+//  ok if no problem found
+template<class T> bool BinaryTreeNode<T>::validate( T &max, T &min )
+{
+    bool ok = true;
+    if( val >= max )
+        max = val;
+    if( val <= min )
+        min = val;
+    if( right )
+    {
+        T right_max=val, right_min=val;
+        ok = right->validate( right_max, right_min );
+        ok = ok && right_min>=val; // everything to the right should be >= val
+        max = right_max;
+    }
+    if( ok && left )
+    {
+        T left_max=val, left_min=val;
+        ok = left->validate( left_max, left_min );
+        ok = ok && left_max<=val; // everything to the left should be <= val
+        min = left_min;
+    }
+    return ok;
+}
+
+template<class T> void BinaryTreeNode<T>::insert( const T &key  )
 {
     if( key == val )
     {
@@ -150,28 +223,40 @@ template<class T> void BinaryTreeNode<T>::insert( const T &key, BinaryTree<T> *r
         temp->left = left;
         left = temp;
     }
- /*  else if( count > 5 )
-    {
-        auto temp = make_shared<BinaryTreeNode<T>>(key);
-        if( key < root->data->val )
-            temp->right = root->data;
-        else
-            temp->left = root->data;
-        root->data = temp;
-    } */
     else if( key < val )
     {
         if( left )
-            left->insert(key,root,count+1);
+            left->insert(key);
         else
             left = make_shared<BinaryTreeNode<T>>(key);
     }
     else if( key > val )
     {
         if( right )
-            right->insert(key,root,count+1);
+            right->insert(key);
         else
             right = make_shared<BinaryTreeNode<T>>(key);
+    }
+}
+
+void countdown_game( BinaryTree<string> &dict, std::string letters );
+void countdown( BinaryTree<string> &dict )
+{
+    std::string games[] =
+    {
+        "nesoawmig",
+        "lutrasihs",
+        "oairnsnds",
+        "eotlysuct",
+        "lnteierha",
+        "eapocmest",
+        "oautgsmir",
+        "brftogdue"
+    };
+
+    for( int i=0; i<sizeof(games)/sizeof(games[0]); i++ )
+    {
+        countdown_game( dict, games[i] );
     }
 }
 
@@ -200,6 +285,8 @@ bool BinaryTree_test()
         return false;
     if( bt2.find(5) )
         return false;
+    if( !bt2.validate() )
+        return false;
 
     BinaryTree<string> bt3;
     bt3.insert("Roger");
@@ -213,16 +300,10 @@ bool BinaryTree_test()
         return false;
     if( bt3.find("Steve") )
         return false;
-    return ok;
-}
+    if( !bt3.validate() )
+        return false;
 
-bool set_test()
-{
-#if 1
     BinaryTree<string> dict;
-#else
-    set<string> dict;
-#endif
     ifstream in("wlist_match12.txt");
     if( !in )
     {
@@ -264,10 +345,10 @@ bool set_test()
             }
         }
         cerr << util::sprintf( "Reading dictionary(%d,%d), end\n", rands++, len-1000 );
-#if 1
-        dict.traverse();
-        cout << max_depth;
-        cerr << "Max depth = " << max_depth;
+        //dict.traverse();
+        //cout << "Max depth = " << max_depth << "\n";
+        if( !dict.validate() )
+            return false;
         if( !dict.find("absorb") )
             return false;
         if( !dict.find("absorbed") )
@@ -286,21 +367,58 @@ bool set_test()
             return false;
         if( dict.find("hfkhasdhkdfla") )
             return false;
-        cerr << "Test passed";
-#else
-        auto it = dict.find("book");
-        if( it == dict.end() )
-            return false;
-        it = dict.find("engineer");
-        if( it == dict.end() )
-            return false;
-        it = dict.find("hfkhasdhkdfla");
-        if( it != dict.end() )
-            return false;
-#endif
+        cout << "Test passed\n";
+        countdown(dict);
     }
     return true;
 
 }
 
+
+int algo( BinaryTree<string> &dict,  BinaryTree<string> &solutions, std::string letters, std::string word_so_far, unsigned int best_so_far )
+{
+    int len = letters.length();
+    std::string word = word_so_far;
+    for( int i=0; i<len; i++ )
+    {
+        word = word_so_far;
+        char c = letters[i];
+        word += c;
+        if( dict.find(word) )
+        {
+            if( word.length() > best_so_far )
+            {
+                best_so_far = word.length();
+                solutions.clear();
+                solutions.insert(word);
+            }
+            else if( word.length() == best_so_far )
+            {
+                if( !solutions.find(word) )
+                    solutions.insert(word);
+            }
+        }
+        std::string t, t1, t2;
+        if( i>0 )
+            t1 = letters.substr(0,i);
+        if( i<len-1 )
+            t2 = letters.substr(i+1);
+        t = t1+t2;
+        if( t.length() > 0 )
+            best_so_far = algo( dict, solutions, t, word, best_so_far );
+    }
+    return best_so_far;
+}
+
+void countdown_game( BinaryTree<string> &dict, std::string letters )
+{
+    printf( "Letters are;\n%s\n", letters.c_str() );
+    BinaryTree<string> solutions;
+    algo( dict, solutions, letters, "", 0 );
+    std::vector<string> keys = solutions.traverse_read();
+    printf( "Solutions are;\n" );
+    for( auto s: keys )
+        printf( "%s\n", s.c_str() );
+    printf( "\n" );
+}
 
