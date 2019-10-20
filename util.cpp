@@ -239,4 +239,9 @@ void rightpad( std::string &s, unsigned int width )
     }
 }
 
+void kill_unwanted_optimisation( int *p )
+{
+    // does nothing but calling function doesn't know that
+}
+
 } //namespace util
